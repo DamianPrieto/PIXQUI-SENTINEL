@@ -3,26 +3,43 @@
 
 #Librerías importadas   
 
-import pandas as pd 
-import numpy as np
+from pathlib import Path
+import pandas as pd
 
+def extract_arch(año):
+    # Ajustamos la ruta si utils.py está en la carpeta 'src'
+    ruta_base = Path(__file__).resolve().parent.parent / 'data'
+    ruta_carpeta = ruta_base / f'ssa_egresos_{año}'
 
-# Funciones definidas en utils.py
+    #Ajustamos columnas deseadas para optimizar memoria
+    col_egre = ['ID', 'CLUES', 'EGRESO', 'INGRE', 'DIAS_ESTA', 'EDAD', 'SEXO', 
+                'PESO', 'TALLA', 'ENTIDAD', 'MUNIC', 'LOC', 'SERVICIOINGRE', 
+                'SERVICIO02', 'SERVICIO03', 'SERVICIOEGRE', 'PROCED', 'CLUESPROCED',
+                'MOTEGRE', 'CLUESREFERIDO', 'DIAG_INI', 'AFECPRIN',
+                'VEZ', 'CAUSAEXT']
+    
+    col_afec = ['ID', 'AFEC']
 
-def extract_arch(archivo):
-    ruta_base = 'D:\\Users\\Angel\\Documents\\Proyectos\\Proyecto_ECV_Mexico\\Datos'
-    if (archivo > 2018):
-        txt = str(archivo)
-        df_egre = pd.read_table(f'{ruta_base}\\ssa_egresos_{txt}\\Egresos.txt', sep='|')
-        df_afec = pd.read_table(f'{ruta_base}\\ssa_egresos_{txt}\\Afecciones.txt', sep='|')
+    col_proc = ['ID', 'PROMED', 'TIPO']
+
+    if not ruta_carpeta.exists():
+        raise FileNotFoundError(f"La carpeta para el año {año} no existe.")
+
+    # Lógica de carga según el periodo histórico
+    if año > 2018:
+        # Formato Moderno: TXT con separador de tubería |
+        df_egre = pd.read_table(ruta_carpeta / 'Egresos.txt', sep='|', usecols=col_egre, low_memory=False)
+        df_afec = pd.read_table(ruta_carpeta / 'Afecciones.txt', sep='|', usecols=col_afec, low_memory=False)
+        df_proc = pd.read_table(ruta_carpeta / 'Procedimientos.txt', sep='|', usecols=col_proc, low_memory=False)
     else:
-        txt = str(archivo)
-        df_egre = pd.read_csv(f'{ruta_base}\\ssa_egresos_{txt}\\EGRESO_{txt}.csv')
-        df_afec = pd.read_csv(f'{ruta_base}\\ssa_egresos_{txt}\\AFECCIONES_{txt}.csv')
+        # Formato Clásico: CSV con comas
+        df_egre = pd.read_csv(ruta_carpeta / f'EGRESO_{año}.csv', usecols=col_egre, low_memory=False)
+        df_afec = pd.read_csv(ruta_carpeta / f'AFECCIONES_{año}.csv', usecols=col_afec, low_memory=False)
+        df_proc = pd.read_csv(ruta_carpeta / f'PROCEDIMIENTOS_{año}.csv', usecols=col_proc, low_memory=False)
 
-    df_afec['AFEC'] = df_afec['AFEC'].astype(str).str.extract(r"(\b[I]\w+)")
-    df_afec = df_afec.dropna(subset=["AFEC"])
-    df_filtrado_combinado = pd.merge(df_afec, df_egre, on='ID', how='inner')
+    # El Triple Merge Encadenado
+    # Unimos Afecciones con Egresos, y el resultado con Procedimientos
+    df_combinado = df_afec.merge(df_egre, on='ID', how='inner').merge(df_proc, on='ID', how='inner')
 
-    return df_filtrado_combinado
 
+    return df_combinado
