@@ -14,18 +14,18 @@ def ejecutar_prueba():
         df_resultado = extract_arch(anio_test)
         
         # --- BLOQUE DE DIAGNÓSTICO ---
-        print("\n✅ PRUEBA EXITOSA")
-        print(f"📊 Total de registros (filas): {df_resultado.shape[0]:,}")
-        print(f"📋 Total de variables (columnas): {df_resultado.shape[1]}")
+        print("\nPRUEBA EXITOSA")
+        print(f"Total de registros (filas): {df_resultado.shape[0]:,}")
+        print(f"Total de variables (columnas): {df_resultado.shape[1]}")
         
-        print("\n🔍 Primeras 5 filas del Master Merge:")
+        print("\nPrimeras 5 filas del Master Merge:")
         print(df_resultado.head())
         
         # Verificamos si logramos capturar las columnas críticas para tu investigación
         # como Peso y Talla para el IMC
         columnas_criticas = ['ID', 'PESO', 'TALLA', 'AFEC', 'MOTEGRE']
         presentes = [c for c in columnas_criticas if c in df_resultado.columns]
-        print(f"\n🎯 Variables críticas detectadas: {presentes}")
+        print(f"\n Variables críticas detectadas: {presentes}")
 
         
         # Prueba de estandarización 
@@ -58,9 +58,9 @@ def ejecutar_prueba():
         print("\n Fase de Pruebas completada exitosamente.")
 
     except FileNotFoundError as e:
-        print(f"\n❌ Error de archivos: {e}")
+        print(f"\n Error de archivos: {e}")
     except Exception as e:
-        print(f"\n💥 Fallo inesperado: {e}")
+        print(f"\n Fallo inesperado: {e}")
 
 
 if __name__ == "__main__":

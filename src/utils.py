@@ -6,6 +6,7 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np  
+import duckdb
 
 # Funcion para extraer y combinar datos de archivos según el año
 
@@ -83,3 +84,57 @@ def fechas_inteligentes(series):
     resultado[mask_diagonal] = pd.to_datetime(s[mask_diagonal], dayfirst=True, errors='coerce')
     
     return resultado
+
+# Funcion para crear la base de datos completa PIXQUI-SENTINEL
+
+
+
+def inicializar_db(db_path="data/pixqui_sentinel.duckdb"):
+    """
+    Crea la base de datos y la tabla con tipos de datos optimizados 
+    para el análisis nacional de enfermedades cardiovasculares.
+    """
+    # 1. Conexión (se crea el archivo si no existe)
+    con = duckdb.connect(db_path)
+    
+    # 2. Creación de la tabla con tipos de datos de alto rendimiento
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS egresos_ecv (
+        -- Identificadores masivos
+        id_registro BIGINT PRIMARY KEY,
+        
+        -- Geografía (Cadenas de longitud fija para velocidad)
+        entidad CHAR(2),
+        municipio CHAR(3),
+        localidad CHAR(4),
+        clave_geo CHAR(9), 
+        clues VARCHAR(15),
+        
+        -- Datos Temporales (Tipo DATE nativo)
+        fecha_ingreso DATE,
+        fecha_egreso DATE,
+        dias_estancia SMALLINT,
+        
+        -- Perfil Biomédico (Optimización de espacio)
+        edad SMALLINT, 
+        sexo TINYINT, -- 1:H, 2:M
+        peso DECIMAL(5,2), 
+        talla DECIMAL(5,2),
+        imc DECIMAL(5,2),
+        
+        -- Diagnósticos y Resultados
+        afeccion VARCHAR(5),
+        diagnostico_inicio VARCHAR(5),
+        motivo_egreso TINYINT, -- 6 = Defunción
+        
+        -- Otros indicadores
+        vez TINYINT,
+        causa_ext VARCHAR(5),
+        promed SMALLINT,
+        tipo CHAR(1)
+    );
+    """)
+    
+    con.close()
+    print(f"🛡️ Bóveda DuckDB inicializada en: {db_path}")
+    return db_path
