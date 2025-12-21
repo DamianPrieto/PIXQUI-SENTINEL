@@ -1,2 +1,4 @@
-"data/" 
-"*.db" 
+data/
+*.db
+.env
+__pycache__/

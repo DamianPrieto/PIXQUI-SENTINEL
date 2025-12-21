@@ -25,3 +25,4 @@ def extract_arch(archivo):
     df_filtrado_combinado = pd.merge(df_afec, df_egre, on='ID', how='inner')
 
     return df_filtrado_combinado
+
