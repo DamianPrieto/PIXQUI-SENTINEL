@@ -5,6 +5,9 @@
 
 from pathlib import Path
 import pandas as pd
+import numpy as np  
+
+# Funcion para extraer y combinar datos de archivos según el año
 
 def extract_arch(año):
     # Ajustamos la ruta si utils.py está en la carpeta 'src'
@@ -43,3 +46,40 @@ def extract_arch(año):
 
 
     return df_combinado
+
+# Funcion de estandarizacion de columnas 
+
+def estand_geo(series, ceros):
+    # Usamos .fillna(0) para que no truene si hay vacíos
+    # Si es nulo, pone 0, luego convierte a entero, luego a string y rellena ceros
+    return series.fillna(0).astype(int).astype(str).str.zfill(ceros)
+
+def limpiar_outliers(series, min_val, max_val):
+    # Convertir el código de error 999 (y 998) a NaN explícitamente
+    col = series.replace([999, 999.0, 998, 998.0], np.nan)
+    
+    # Validar rangos biológicos (ej. nadie pesa 0 kg ni 1000 kg)
+    # Usamos np.where: "Si es válido déjalo, si no, pon NaN"
+    # Condición: Que sea mayor a min_val Y menor a max_val
+    col = np.where((col >= min_val) & (col <= max_val), col, np.nan)
+    
+    return col
+
+def fechas_inteligentes(series):
+
+    # Convertimos a texto y partimos donde haya un espacio. Nos quedamos con la primera parte.
+    # Esto elimina el " 00:00:00" automáticamente.
+    s = series.astype(str).str.split(' ').str[0].str.strip()
+    
+    # Creamos una Serie vacía para guardar los resultados
+    resultado = pd.Series(pd.NaT, index=series.index)
+    
+    # CASO A: TIENEN GUION (-) -> Asumimos YYYY-MM-DD
+    mask_guion = s.str.contains('-', na=False)
+    resultado[mask_guion] = pd.to_datetime(s[mask_guion], format='%Y-%m-%d', errors='coerce')
+    
+    # CASO B: TIENEN DIAGONAL (/) -> Asumimos DD/MM/YYYY
+    mask_diagonal = s.str.contains('/', na=False)
+    resultado[mask_diagonal] = pd.to_datetime(s[mask_diagonal], dayfirst=True, errors='coerce')
+    
+    return resultado
