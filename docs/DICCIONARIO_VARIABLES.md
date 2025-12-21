@@ -1,6 +1,6 @@
-# 🛡️ Diccionario de Variables - Proyecto PIXQUI
+# Diccionario de Variables - Proyecto PIXQUI
 **Sistema de Vigilancia Epidemiológica y Modelado Predictivo**
-**Autor:** Ángel [Tu Apellido] | UPIBI - IPN
+**Autor:** Angel Damian Prieto López | UPIBI - IPN
 
 Este documento define las variables críticas procesadas por el motor de PIXQUI para el análisis de egresos hospitalarios y detección de brotes epidemiológicos.
 
