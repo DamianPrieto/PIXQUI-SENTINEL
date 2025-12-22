@@ -59,15 +59,18 @@ def ejecutar_prueba(anio):
 
         print("\n Fase de Pruebas completada exitosamente.")
 
+
     except FileNotFoundError as e:
         print(f"\n Error de archivos: {e}")
     except Exception as e:
-        print(df_resultado.columns.tolist())
         print(f"\n Fallo inesperado: {e}")
+ 
 
 
 if __name__ == "__main__":
     años = np.arange(2010, 2026)
     for año in años:
         ejecutar_prueba(año)
+
+
 

@@ -29,8 +29,16 @@ def extract_arch(año):
     nom_egre = 'Egresos.txt' if año > 2018 else f'EGRESO_{año}.csv'
     nom_afec = 'Afecciones.txt' if año > 2018 else f'AFECCIONES_{año}.csv'
     nom_proc = 'Procedimientos.txt' if año > 2018 else f'PROCEDIMIENTOS_{año}.csv'
-    sep = '|' if año > 2018 else ','
-
+    
+    if año == 2017:
+        sep = '|'
+    elif año >= 2020:
+        sep = '|'
+    elif año >= 2018:
+        sep = ','
+    else:
+        sep = ','
+    
     def cargar_flexible(archivo, columnas_deseadas):
         path = ruta_carpeta / archivo
         if not path.exists():
