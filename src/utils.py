@@ -25,26 +25,45 @@ def extract_arch(año):
     col_afec = ['ID', 'AFEC']
 
     col_proc = ['ID', 'PROMED', 'TIPO']
+    # Definimos qué archivos buscar según el año
+    nom_egre = 'Egresos.txt' if año > 2018 else f'EGRESO_{año}.csv'
+    nom_afec = 'Afecciones.txt' if año > 2018 else f'AFECCIONES_{año}.csv'
+    nom_proc = 'Procedimientos.txt' if año > 2018 else f'PROCEDIMIENTOS_{año}.csv'
+    sep = '|' if año > 2018 else ','
 
-    if not ruta_carpeta.exists():
-        raise FileNotFoundError(f"La carpeta para el año {año} no existe.")
+    def cargar_flexible(archivo, columnas_deseadas):
+        path = ruta_carpeta / archivo
+        if not path.exists():
+            print(f"{archivo} no encontrado. Generando datos vacíos.")
+            return pd.DataFrame(columns=['ID'])
+        
+        # Leemos solo las columnas que REALMENTE existen en el archivo
+        # para evitar el error de 'Usecols do not match'
+        cols_en_archivo = pd.read_csv(path, sep=sep, nrows=0).columns.tolist()
+        cols_a_cargar = [c for c in columnas_deseadas if c in cols_en_archivo]
+        try:
+            # Intento normal
+            df = pd.read_csv(path, sep=sep, usecols=cols_a_cargar, encoding='utf-8', low_memory=False)
+        except UnicodeDecodeError:
+            # Si falla el encoding (caso 2017, con separacion por |)
+            df = pd.read_csv(path, sep= "|", usecols=cols_a_cargar, encoding='latin-1', low_memory=False)
+        except KeyError:
+            # El caso de 2019 con separacion por ,
+            pd.read_csv(path, sep= ",", usecols=cols_a_cargar, encoding='latin-1', low_memory=False)
+        
+        # --- EL TRUCO MAESTRO ---
+        # Forzamos ID a string para evitar el error de merge
+        if 'ID' in df.columns:
+            df['ID'] = df['ID'].astype(str).str.strip().str.replace('.0', '', regex=False)
+        return df
 
-    # Lógica de carga según el periodo histórico
-    if año > 2018:
-        # Formato Moderno: TXT con separador de tubería |
-        df_egre = pd.read_table(ruta_carpeta / 'Egresos.txt', sep='|', usecols=col_egre, low_memory=False)
-        df_afec = pd.read_table(ruta_carpeta / 'Afecciones.txt', sep='|', usecols=col_afec, low_memory=False)
-        df_proc = pd.read_table(ruta_carpeta / 'Procedimientos.txt', sep='|', usecols=col_proc, low_memory=False)
-    else:
-        # Formato Clásico: CSV con comas
-        df_egre = pd.read_csv(ruta_carpeta / f'EGRESO_{año}.csv', usecols=col_egre, low_memory=False)
-        df_afec = pd.read_csv(ruta_carpeta / f'AFECCIONES_{año}.csv', usecols=col_afec, low_memory=False)
-        df_proc = pd.read_csv(ruta_carpeta / f'PROCEDIMIENTOS_{año}.csv', usecols=col_proc, low_memory=False)
+    # Carga de las 3 tablas con la nueva lógica flexible
+    df_egre = cargar_flexible(nom_egre, col_egre)
+    df_afec = cargar_flexible(nom_afec, col_afec)
+    df_proc = cargar_flexible(nom_proc, col_proc)
 
-    # El Triple Merge Encadenado
-    # Unimos Afecciones con Egresos, y el resultado con Procedimientos
+    # El Triple Merge ahora es seguro porque todos los ID son strings
     df_combinado = df_afec.merge(df_egre, on='ID', how='inner').merge(df_proc, on='ID', how='inner')
-
 
     return df_combinado
 
@@ -56,6 +75,10 @@ def estand_geo(series, ceros):
     return series.fillna(0).astype(int).astype(str).str.zfill(ceros)
 
 def limpiar_outliers(series, min_val, max_val):
+
+    # Forzamos a numérico (convierte errores a NaN)
+    series = pd.to_numeric(series, errors='coerce')
+    
     # Convertir el código de error 999 (y 998) a NaN explícitamente
     col = series.replace([999, 999.0, 998, 998.0], np.nan)
     

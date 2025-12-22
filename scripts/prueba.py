@@ -1,13 +1,14 @@
 # prueba.py
 from src.utils import extract_arch, estand_geo, limpiar_outliers, fechas_inteligentes
 import pandas as pd
+import numpy as np
 
-def ejecutar_prueba():
+def ejecutar_prueba(anio):
     print(" Iniciando Fase de Pruebas: PIXQUI-SENTINEL")
     print("-" * 45)
     
     # Elegimos un año para la prueba (por ejemplo, 2024 por ser formato moderno)
-    anio_test = 2024
+    anio_test = anio
     
     try:
         print(f" Procesando datos del año {anio_test}...")
@@ -18,13 +19,14 @@ def ejecutar_prueba():
         print(f"Total de registros (filas): {df_resultado.shape[0]:,}")
         print(f"Total de variables (columnas): {df_resultado.shape[1]}")
         
-        print("\nPrimeras 5 filas del Master Merge:")
-        print(df_resultado.head())
+        #print("\nPrimeras 5 filas del Master Merge:")
+        #print(df_resultado.head())
         
         # Verificamos si logramos capturar las columnas críticas para tu investigación
         # como Peso y Talla para el IMC
         columnas_criticas = ['ID', 'PESO', 'TALLA', 'AFEC', 'MOTEGRE']
         presentes = [c for c in columnas_criticas if c in df_resultado.columns]
+        
         print(f"\n Variables críticas detectadas: {presentes}")
 
         
@@ -60,8 +62,12 @@ def ejecutar_prueba():
     except FileNotFoundError as e:
         print(f"\n Error de archivos: {e}")
     except Exception as e:
+        print(df_resultado.columns.tolist())
         print(f"\n Fallo inesperado: {e}")
 
 
 if __name__ == "__main__":
-    ejecutar_prueba()
+    años = np.arange(2010, 2026)
+    for año in años:
+        ejecutar_prueba(año)
+
