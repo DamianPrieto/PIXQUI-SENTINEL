@@ -11,71 +11,76 @@ import duckdb
 # Funcion para extraer y combinar datos de archivos según el año
 
 def extract_arch(año):
-    # ... (Toda tu lógica de rutas y nombres de archivo se queda IGUAL) ...
+
+    # Ajustamos la ruta si utils.py está en la carpeta 'src'
+
     ruta_base = Path(__file__).resolve().parent.parent / 'data'
+
     ruta_carpeta = ruta_base / f'ssa_egresos_{año}'
-    
-    # ... (Definición de columnas y nombres de archivo IGUAL) ...
-    col_egre = ['ID', 'CLUES', 'EGRESO', 'INGRE', 'DIAS_ESTA', 'EDAD', 'SEXO', 
-                'PESO', 'TALLA', 'ENTIDAD', 'MUNIC', 'LOC', 'SERVICIOINGRE', 
+
+    #Ajustamos columnas deseadas para optimizar memoria
+
+    col_egre = ['ID', 'CLUES', 'EGRESO', 'INGRE', 'DIAS_ESTA', 'EDAD', 'SEXO',
+                'PESO', 'TALLA', 'ENTIDAD', 'MUNIC', 'LOC', 'SERVICIOINGRE',
                 'SERVICIO02', 'SERVICIO03', 'SERVICIOEGRE', 'PROCED', 'CLUESPROCED',
                 'MOTEGRE', 'CLUESREFERIDO', 'DIAG_INI', 'AFECPRIN',
                 'VEZ', 'CAUSAEXT']
+
     col_afec = ['ID', 'AFEC', 'NUMAFEC']
     col_proc = ['ID', 'PROMED', 'TIPO']
 
-# Definimos nombres de archivos
+    # Definimos qué archivos buscar según el año
     nom_egre = 'Egresos.txt' if año > 2018 else f'EGRESO_{año}.csv'
     nom_afec = 'Afecciones.txt' if año > 2018 else f'AFECCIONES_{año}.csv'
     nom_proc = 'Procedimientos.txt' if año > 2018 else f'PROCEDIMIENTOS_{año}.csv'
-    
-    # Definimos separador
-    if año == 2017: sep = '|'
-    elif año >= 2020: sep = '|'
-    else: sep = ','
-
-    # --- AQUÍ CAMBIAMOS LA FUNCIÓN DE CARGA ---
+   
+    if año == 2017:
+        sep = '|'
+    elif año >= 2020:
+        sep = '|'
+    elif año >= 2018:
+        sep = ','
+    else:
+        sep = ','
+   
     def cargar_flexible(archivo, columnas_deseadas):
         path = ruta_carpeta / archivo
         if not path.exists():
-            print(f"Archivo no encontrado: {archivo}")
-            return pd.DataFrame(columns=columnas_deseadas)
-        
-        # Leemos headers para no fallar
-        try:
-            sample = pd.read_csv(path, sep=sep, nrows=0, encoding='latin-1')
-            cols_en_archivo = sample.columns.tolist()
-        except:
-            return pd.DataFrame(columns=columnas_deseadas)
-
-        # Filtramos solo las que existen
+            print(f"{archivo} no encontrado. Generando datos vacíos.")
+            return pd.DataFrame(columns=['ID'])
+        # Leemos solo las columnas que REALMENTE existen en el archivo
+        # para evitar el error de 'Usecols do not match'
+        cols_en_archivo = pd.read_csv(path, sep=sep, nrows=0).columns.tolist()
         cols_a_cargar = [c for c in columnas_deseadas if c in cols_en_archivo]
-        
-        # Cargamos el DF
         try:
+            # Intento normal
             df = pd.read_csv(path, sep=sep, usecols=cols_a_cargar, encoding='utf-8', low_memory=False)
-        except:
-            df = pd.read_csv(path, sep=sep if año != 2017 else "|", usecols=cols_a_cargar, encoding='latin-1', low_memory=False)
 
-        # Limpieza CRÍTICA del ID (Para que SQL pueda unir después)
+        except UnicodeDecodeError:
+            # Si falla el encoding (caso 2017, con separacion por |)
+            df = pd.read_csv(path, sep= "|", usecols=cols_a_cargar, encoding='latin-1', low_memory=False)
+
+        except KeyError:
+            # El caso de 2019 con separacion por ,
+            pd.read_csv(path, sep= ",", usecols=cols_a_cargar, encoding='latin-1', low_memory=False)
+       
+        # --- EL TRUCO MAESTRO ---
+        # Forzamos ID a string para evitar el error de merge
+
         if 'ID' in df.columns:
-            # Quitamos decimales (.0) y convertimos a número limpio
-            df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype('int64')
-        
-        # Agregamos el AÑO para que no se pierda el rastro
-        df['ANIO'] = año
-        
+            df['ID'] = df['ID'].astype(str).str.strip().str.replace('.0', '', regex=False)
         return df
 
-    # Cargamos las 3 partes
-    print(f"  Extrayendo {año}...")
+    # Carga de las 3 tablas con la nueva lógica flexible
     df_egre = cargar_flexible(nom_egre, col_egre)
     df_afec = cargar_flexible(nom_afec, col_afec)
     df_proc = cargar_flexible(nom_proc, col_proc)
+    df_egre['ANIO'] = año
+    df_afec['ANIO'] = año
+    df_proc['ANIO'] = año
 
-    # --- EL GRAN CAMBIO: Retornamos las 3 piezas SEPARADAS ---
-    # No hacemos merge aquí. Dejamos que DuckDB lo haga después.
     return df_egre, df_afec, df_proc
+
 
 # Funcion de estandarizacion de columnas 
 
@@ -125,14 +130,14 @@ def inicializar_db(db_path="data/pixqui_sentinel.duckdb"):
     con = duckdb.connect(db_path)
     
     # Borramos tablas si existen para reiniciar limpio (Opcional)
-    # con.execute("DROP TABLE IF EXISTS EGRESOS_BASE; DROP TABLE IF EXISTS AFECCIONES; DROP TABLE IF EXISTS PROCEDIMIENTOS;")
+    con.execute("DROP TABLE IF EXISTS EGRESOS_BASE; DROP TABLE IF EXISTS AFECCIONES; DROP TABLE IF EXISTS PROCEDIMIENTOS;")
 
     print("Construyendo esquema en DuckDB...")
     
     # TABLA 1: EGRESOS_BASE (Todas las columnas explicítas)
     con.execute("""
     CREATE TABLE IF NOT EXISTS EGRESOS_BASE (
-        ID BIGINT,
+        ID VARCHAR,
         ANIO SMALLINT,
         CLUES VARCHAR,
         EGRESO DATE,
@@ -157,7 +162,7 @@ def inicializar_db(db_path="data/pixqui_sentinel.duckdb"):
         CLUESREFERIDO VARCHAR,
         DIAG_INI VARCHAR(6),
         AFECPRIN VARCHAR(6),
-        VEZ TINYINT,
+        VEZ VARCHAR(10),
         CAUSAEXT VARCHAR
     );
     """)
@@ -165,7 +170,7 @@ def inicializar_db(db_path="data/pixqui_sentinel.duckdb"):
     # TABLA 2: AFECCIONES
     con.execute("""
     CREATE TABLE IF NOT EXISTS AFECCIONES (
-        ID BIGINT,
+        ID VARCHAR,
         AFEC VARCHAR(6),
         NUMAFEC SMALLINT,
         ANIO SMALLINT
@@ -175,7 +180,7 @@ def inicializar_db(db_path="data/pixqui_sentinel.duckdb"):
     # TABLA 3: PROCEDIMIENTOS
     con.execute("""
     CREATE TABLE IF NOT EXISTS PROCEDIMIENTOS (
-        ID BIGINT,
+        ID VARCHAR,
         PROMED VARCHAR(6),
         TIPO CHAR(1),
         ANIO SMALLINT
@@ -185,3 +190,24 @@ def inicializar_db(db_path="data/pixqui_sentinel.duckdb"):
     con.close()
     print(f"Bóveda DuckDB lista en: {db_path}")
     return db_path
+
+# Funcion para forzar a ser numeros
+
+def sanitizar_numericos(df, reglas):
+    """
+    Recibe un diccionario: {'NOMBRE_COLUMNA': VALOR_MAXIMO}
+    Ejemplo: {'MOTEGRE': 9, 'VEZ': 20}
+    """
+    for col, max_val in reglas.items():
+        if col in df.columns:
+            # 1. Fuerza bruta: Texto a Numero (letras -> NaN)
+            series = pd.to_numeric(df[col], errors='coerce')
+            
+            # 2. Filtro de Rango: Si es < 0 o > max_val -> NaN
+            # Usamos np.where porque es vectorizado (ultra rápido)
+            df[col] = np.where((series >= 0) & (series <= max_val), series, np.nan)
+            nulos = df[col].isna().sum()
+            if nulos > 0:
+                 print(f"Columna {col}: {nulos} datos inválidos convertidos a NULL")
+            
+    return df

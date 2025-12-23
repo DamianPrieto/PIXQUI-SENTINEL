@@ -1,28 +1,16 @@
 import duckdb
-import os
+import pandas as pd
 
-# 1. Definimos la ruta correcta a la base de datos
-db_path = 'data/pixqui_sentinel.duckdb'
+# Conectamos
+con = duckdb.connect('data/pixqui_sentinel.duckdb')
 
-# Verificamos si el archivo existe antes de conectar
-if not os.path.exists(db_path):
-    print(f"¡CUIDADO! No encuentro el archivo en: {db_path}")
-    print("¿Seguro que ya corriste la función inicializar_db()?")
-else:
-    print(f"Archivo encontrado en: {db_path}")
+print("--- 🏥 ÚLTIMOS 5 PACIENTES (EGRESOS) ---")
+# Ordenamos por AÑO descendente para ver lo más reciente
+df_egre = con.sql("SELECT ID, ANIO, EDAD, SEXO, ENTIDAD FROM EGRESOS_BASE ORDER BY ANIO DESC LIMIT 5").df()
+print(df_egre)
 
-    # 2. Conectamos a la base de datos correcta
-    con = duckdb.connect(db_path)
+print("\n--- 🦠 ÚLTIMAS 5 AFECCIONES ---")
+df_afec = con.sql("SELECT * FROM AFECCIONES ORDER BY ANIO DESC LIMIT 5").df()
+print(df_afec)
 
-    print("\n--- 1. TABLAS ACTUALES ---")
-    con.sql("SHOW TABLES").show()
-
-    print("\n--- 2. VARIABLES DE LA TABLA 'EGRESOS' ---")
-    try:
-        # OJO: Sin comillas o con comillas dobles
-        con.sql('DESCRIBE "EGRESOS"').show()
-    except Exception as e:
-        print(f"Error buscando la tabla: {e}")
-        print("Es probable que el archivo exista pero esté vacío. ¡Corre inicializar_db() primero!")
-
-    con.close()
+con.close()
