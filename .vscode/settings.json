@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "DuckDB",
+            "name": "PIXQUIE-LOCAL",
+            "group": "DUCKDB",
+            "database": "${workspaceFolder:PROYECTO PIXQUI}/data/pixquie_sentinel.duckdb"
+        }
+    ]
+}
