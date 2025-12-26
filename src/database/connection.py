@@ -28,11 +28,11 @@ class DatabaseManager:
             
             self.conexion = None
             self.inicializado = True
-            print(f"⚙️ Configuración de DB cargada: {self.ruta_db}")
+            print(f"Configuración de DB cargada: {self.ruta_db}")
 
     def conectar(self):
         if self.conexion is None:
-            print(f"🔌 Abriendo conexión a DuckDB...")
+            print(f"Abriendo conexión a DuckDB...")
             # Convertimos Path a string porque DuckDB a veces es exigente
             self.conexion = duckdb.connect(str(self.ruta_db), config={'memory_limit': '8GB'})
         return self.conexion
@@ -42,11 +42,22 @@ class DatabaseManager:
         # Aquí podriamos agregar try/except para capturar errores de SQL
         return con.execute(query)
 
+    def cargar_df(self, nombre_tabla, df):
+        """Método para cargar la base de datos si es necesario."""
+        con = self.conectar()
+        if df.empty:
+            print("Dataframe vacío. No se cargará nada.")
+            return
+        else:  # Definimos el query para cargar la base de datos
+            query = f"INSERT INTO {nombre_tabla} BY NAME SELECT * FROM df"
+            con.execute(query)
+            print(f"{len(df)} filas insertadas en {nombre_tabla}.")
+
     def cerrar(self):
         if self.conexion is not None:
             self.conexion.close()
             self.conexion = None
-            print("🔌 Conexión cerrada y liberada.")
+            print("Conexión cerrada y liberada.")
 
 # --- INSTANCIA GLOBAL ---
 # Creamos el objeto aquí mismo.
