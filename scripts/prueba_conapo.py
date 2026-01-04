@@ -20,7 +20,8 @@ def carga_masiva_poblacion():
         POB_012_29 INTEGER,
         POB_30_59 INTEGER, 
         POB_60_mm INTEGER, 
-        POB_TOTAL INTEGER
+        POB_TOTAL INTEGER,
+        NOM_MUN VARCHAR
     );
     """
     db.ejecutar_query(sql_create)
@@ -59,7 +60,7 @@ def carga_masiva_poblacion():
     
     # 3. Verificación rápida
     count = db.ejecutar_query("SELECT COUNT(*) FROM DIM_POBLACION").fetchone()[0]
-    print(f"🔎 Verificación en DB: {count} filas existentes.")
+    print(f"Verificación en DB: {count} filas existentes.")
     
     db.cerrar()
 

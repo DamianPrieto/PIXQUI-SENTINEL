@@ -22,7 +22,7 @@ class CargadorConapo(CargadorBase):
             self.df = pd.DataFrame()
 
     def transformar(self):
-        print(f"🧹 [CONAPO] Transformando datos para el año {self.anio}...")
+        print(f" [CONAPO] Transformando datos para el año {self.anio}...")
         
         # 1. Validación de columnas críticas ANTES de procesar
         # Es buena práctica verificar que 'ANIO' exista para no filtrar a ciegas
@@ -46,7 +46,7 @@ class CargadorConapo(CargadorBase):
         # 4. Selección de Columnas
         columnas_relevantes = [
             'SEXO', 'ANIO', 'POB_00_011', 'POB_012_29', 
-            'POB_30_59', 'POB_60_mm', 'POB_TOTAL', 'CVE_GEO'
+            'POB_30_59', 'POB_60_mm', 'POB_TOTAL', 'CVE_GEO', 'NOM_MUN'
         ]
         
         # Verificamos que todas las columnas existan para evitar KeyError

@@ -38,7 +38,7 @@ class EpidemiologyService:
         cve_estado: '07' (Chiapas)
         letra_cie: 'I' (Cardiovasculares)
         """
-        print(f"📊 Generando matriz de calor para estado {cve_estado}, bloque {letra_cie}...")
+        print(f" Generando matriz de calor para estado {cve_estado}, bloque {letra_cie}...")
 
         sql = f"""
         WITH Poblacion AS (
@@ -75,9 +75,3 @@ class EpidemiologyService:
     
 
 servicio = EpidemiologyService()
-
-# ¡Un solo viaje a la base de datos! ⚡
-mis_enfermedades = ['E11', 'E12', 'E13', 'E14']
-df = servicio.obtener_tasa_multiple(2022, '01001', mis_enfermedades)
-
-print(df)
